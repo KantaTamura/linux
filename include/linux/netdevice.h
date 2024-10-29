@@ -375,6 +375,7 @@ enum gro_result {
 	GRO_HELD,
 	GRO_NORMAL,
 	GRO_CONSUMED,
+	GRO_DROP,
 };
 typedef enum gro_result gro_result_t;
 

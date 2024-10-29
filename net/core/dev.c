@@ -6190,6 +6190,10 @@ static gro_result_t napi_skb_finish(struct napi_struct *napi,
 		gro_normal_one(napi, skb, 1);
 		break;
 
+	case GRO_DROP:
+		kfree_skb(skb);
+		break;
+
 	case GRO_MERGED_FREE:
 		if (NAPI_GRO_CB(skb)->free == NAPI_GRO_FREE_STOLEN_HEAD)
 			napi_skb_free_stolen_head(skb);
@@ -6282,6 +6286,10 @@ static gro_result_t napi_frags_finish(struct napi_struct *napi,
 		skb->protocol = eth_type_trans(skb, skb->dev);
 		if (ret == GRO_NORMAL)
 			gro_normal_one(napi, skb, 1);
+		break;
+
+	case GRO_DROP:
+		napi_reuse_skb(napi, skb);
 		break;
 
 	case GRO_MERGED_FREE:
