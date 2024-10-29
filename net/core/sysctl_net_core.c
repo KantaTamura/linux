@@ -311,6 +311,13 @@ proc_dolongvec_minmax_bpf_restricted(struct ctl_table *table, int write,
 
 static struct ctl_table net_core_table[] = {
 	{
+		.procname	= "packet_loss_gen",
+		.data		= &sysctl_packet_loss_gen,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec_minmax,
+	},
+	{
 		.procname	= "wmem_max",
 		.data		= &sysctl_wmem_max,
 		.maxlen		= sizeof(int),

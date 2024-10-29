@@ -1433,6 +1433,9 @@ static struct sk_buff *ipip_gso_segment(struct sk_buff *skb,
 	return inet_gso_segment(skb, features);
 }
 
+unsigned int packet_loss_counter = 0;
+__u32 sysctl_packet_loss_gen __read_mostly = 0;
+
 struct sk_buff *inet_gro_receive(struct list_head *head, struct sk_buff *skb)
 {
 	const struct net_offload *ops;
@@ -1455,6 +1458,15 @@ struct sk_buff *inet_gro_receive(struct list_head *head, struct sk_buff *skb)
 	}
 
 	proto = iph->protocol;
+
+	/* if packet is dropped return before GRO */
+	if (sysctl_packet_loss_gen > 0) {
+		if (iph->saddr == in_aton("192.168.10.114") && iph->daddr == in_aton("192.168.10.115") && proto == IPPROTO_TCP) {
+			packet_loss_counter++;
+			if (packet_loss_counter >= sysctl_packet_loss_gen)
+				return pp;
+		}
+	}
 
 	rcu_read_lock();
 	ops = rcu_dereference(inet_offloads[proto]);

@@ -525,6 +525,9 @@ struct skb_shared_info {
 	unsigned int	gso_type;
 	u32		tskey;
 
+	/* record GRO timestamp */
+	ktime_t		gro_tstamp;
+
 	/*
 	 * Warning : all fields before dataref are cleared in __alloc_skb()
 	 */

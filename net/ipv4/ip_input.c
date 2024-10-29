@@ -412,6 +412,18 @@ drop_error:
 	goto drop;
 }
 
+int skb_size_hist_on __read_mostly = 0;
+module_param(skb_size_hist_on, int, 0644);
+MODULE_PARM_DESC(skb_size_hist_on, "record skb sizes distribution");
+EXPORT_SYMBOL(skb_size_hist_on);
+
+unsigned long skb_size_sampling_count __read_mostly = 100000;
+module_param(skb_size_sampling_count, ulong, 0644);
+MODULE_PARM_DESC(skb_size_sampling_count, "granularity of sampling skb sizes");
+EXPORT_SYMBOL(skb_size_sampling_count);
+
+unsigned long tcp_histo[13] = {0};
+
 static int ip_rcv_finish(struct net *net, struct sock *sk, struct sk_buff *skb)
 {
 	struct net_device *dev = skb->dev;
@@ -436,6 +448,9 @@ static int ip_rcv_finish(struct net *net, struct sock *sk, struct sk_buff *skb)
 static struct sk_buff *ip_rcv_core(struct sk_buff *skb, struct net *net)
 {
 	const struct iphdr *iph;
+	static unsigned long index = 1;
+	unsigned long size;
+	int i;
 	u32 len;
 
 	/* When the interface is in promisc. mode, drop all the crap
@@ -508,6 +523,55 @@ static struct sk_buff *ip_rcv_core(struct sk_buff *skb, struct net *net)
 	/* Remove any debris in the socket control block */
 	memset(IPCB(skb), 0, sizeof(struct inet_skb_parm));
 	IPCB(skb)->iif = skb->skb_iif;
+
+	/* record GRO accumulation skb sizes histogram */
+	if (skb_size_hist_on && iph->saddr == in_aton("192.168.10.114") && iph->daddr == in_aton("192.168.10.115")) {
+		if (index >= skb_size_sampling_count) {
+			printk(KERN_INFO "[skb-sizes] %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu",
+				tcp_histo[0], tcp_histo[1], tcp_histo[2], tcp_histo[3], tcp_histo[4], tcp_histo[5],
+				tcp_histo[6], tcp_histo[7], tcp_histo[8], tcp_histo[9], tcp_histo[10],
+				tcp_histo[11], tcp_histo[12]);
+			for (i = 0; i < 13; i++) {
+				tcp_histo[i] = 0;
+			}
+			index = 0;
+		}
+
+		if (skb->len > 300) {
+			if (skb->data_len)
+				size = skb->data_len;
+			else
+				size = skb->len;
+		}
+		if (size >= 60000)
+			tcp_histo[12]++;
+		else if (size >= 55000)
+			tcp_histo[11]++;
+		else if (size >= 50000)
+			tcp_histo[10]++;
+		else if (size >= 45000)
+			tcp_histo[9]++;
+		else if (size >= 40000)
+			tcp_histo[8]++;
+		else if (size >= 35000)
+			tcp_histo[7]++;
+		else if (size >= 30000)
+			tcp_histo[6]++;
+		else if (size >= 25000)
+			tcp_histo[5]++;
+		else if (size >= 20000)
+			tcp_histo[4]++;
+		else if (size >= 15000)
+			tcp_histo[3]++;
+		else if (size >= 10000)
+			tcp_histo[2]++;
+		else if (size >= 5000)
+			tcp_histo[1]++;
+		else if (size >= 500)
+			tcp_histo[0]++;
+
+		index++;
+	}
 
 	/* Must drop socket now because of tproxy. */
 	if (!skb_sk_is_prefetched(skb))

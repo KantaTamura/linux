@@ -249,6 +249,7 @@
 #include <linux/types.h>
 #include <linux/fcntl.h>
 #include <linux/poll.h>
+#include <linux/inet.h>
 #include <linux/inet_diag.h>
 #include <linux/init.h>
 #include <linux/fs.h>
@@ -2281,6 +2282,16 @@ static int tcp_inq_hint(struct sock *sk)
 	return inq;
 }
 
+int measure_latency_on __read_mostly = 0;
+module_param(measure_latency_on, int, 0644);
+MODULE_PARM_DESC(measure_latency_on, "measure GRO to data copy latency");
+EXPORT_SYMBOL(measure_latency_on);
+
+int latency_sampling_count __read_mostly = 1000;
+module_param(latency_sampling_count, int, 0644);
+MODULE_PARM_DESC(latency_sampling_count, "granularity of sampling data copy latency");
+EXPORT_SYMBOL(latency_sampling_count);
+
 /*
  *	This routine copies from a sock struct into the user buffer.
  *
@@ -2304,6 +2315,8 @@ static int tcp_recvmsg_locked(struct sock *sk, struct msghdr *msg, size_t len,
 	long timeo;
 	struct sk_buff *skb, *last;
 	u32 urg_hole = 0;
+	struct iphdr *iph;
+	static int index = 1;	/* index for sampling data copy latency */
 
 	err = -ENOTCONN;
 	if (sk->sk_state == TCP_LISTEN)
@@ -2468,6 +2481,18 @@ found_ok_skb:
 		}
 
 		if (!(flags & MSG_TRUNC)) {
+			/* print data copy latency */
+			if (measure_latency_on) {
+				iph = ip_hdr(skb);
+				if (iph->saddr == in_aton("192.168.10.114") && iph->daddr == in_aton("192.168.10.115")) {
+					if (index >= latency_sampling_count && skb_shinfo(skb)->gro_tstamp != 0) {
+						printk(KERN_INFO "[data-copy-latency] latency=%llu", ktime_to_ns(ktime_sub(ktime_get(), skb_shinfo(skb)->gro_tstamp)));
+						index = 0;
+					}
+					index++;
+				}
+			}
+
 			err = skb_copy_datagram_msg(skb, offset, msg, used);
 			if (err) {
 				/* Exception. Bailout! */

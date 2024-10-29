@@ -6098,6 +6098,15 @@ static enum gro_result dev_gro_receive(struct napi_struct *napi, struct sk_buff 
 		goto ok;
 	}
 
+	/* emulate packet drop */
+	if (sysctl_packet_loss_gen > 0) {
+		if (packet_loss_counter >= sysctl_packet_loss_gen) {
+			ret = GRO_DROP;
+			packet_loss_counter = 0;
+			goto ok;
+		}
+	}
+
 	same_flow = NAPI_GRO_CB(skb)->same_flow;
 	ret = NAPI_GRO_CB(skb)->free ? GRO_MERGED_FREE : GRO_MERGED;
 
@@ -6210,6 +6219,9 @@ gro_result_t napi_gro_receive(struct napi_struct *napi, struct sk_buff *skb)
 
 	ret = napi_skb_finish(napi, skb, dev_gro_receive(napi, skb));
 	trace_napi_gro_receive_exit(ret);
+
+	/* save NAPI timestamp for the skb */
+	skb_shinfo(skb)->gro_tstamp = ktime_get();
 
 	return ret;
 }
