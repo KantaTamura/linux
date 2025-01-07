@@ -525,7 +525,7 @@ static struct sk_buff *ip_rcv_core(struct sk_buff *skb, struct net *net)
 	IPCB(skb)->iif = skb->skb_iif;
 
 	/* record GRO accumulation skb sizes histogram */
-	if (skb_size_hist_on && iph->saddr == in_aton("192.168.10.114") && iph->daddr == in_aton("192.168.10.115")) {
+	if (skb_size_hist_on && iph->saddr == in_aton("172.16.100.1") && iph->daddr == in_aton("172.16.100.2")) {
 		if (index >= skb_size_sampling_count) {
 			printk(KERN_INFO "[skb-sizes] %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu",
 				tcp_histo[0], tcp_histo[1], tcp_histo[2], tcp_histo[3], tcp_histo[4], tcp_histo[5],

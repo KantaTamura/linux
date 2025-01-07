@@ -1461,7 +1461,7 @@ struct sk_buff *inet_gro_receive(struct list_head *head, struct sk_buff *skb)
 
 	/* if packet is dropped return before GRO */
 	if (sysctl_packet_loss_gen > 0) {
-		if (iph->saddr == in_aton("192.168.10.114") && iph->daddr == in_aton("192.168.10.115") && proto == IPPROTO_TCP) {
+		if (iph->saddr == in_aton("172.16.100.1") && iph->daddr == in_aton("172.16.100.2") && proto == IPPROTO_TCP) {
 			packet_loss_counter++;
 			if (packet_loss_counter >= sysctl_packet_loss_gen)
 				return pp;
